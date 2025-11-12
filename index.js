@@ -1,7 +1,7 @@
 const express = require('express')
 const cors = require('cors')
 require('dotenv').config()
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 const port = 3000
 
@@ -27,16 +27,39 @@ async function run() {
         const db = client.db('localbites-db')
         const reviewCollection = db.collection('reviews')
 
+        //get method for All Reviews page
         app.get('/allReviews', async (req, res) => {
             const result = await reviewCollection.find().toArray()
             res.send(result)
         })
 
+        //Get method for Food View details page
+        app.get('/allReviews/:id', async (req, res) => {
+            const { id } = req.params
+            const result = await reviewCollection.findOne({ _id: new ObjectId(id) })
+            // res.send(result)
+            res.send({ success: true, result })
+        })
+
+        //get method for Top Reviews in Home page
         app.get('/topReviews', async (req, res) => {
             const result = await reviewCollection.find().sort({ rating: -1 }).limit(6).toArray()
             res.send(result)
         })
 
+        //get Method for My Reviews
+        app.get('/myReviews', async (req, res) => {
+            const email = req.query.email;
+            const query = {};
+            if (email) {
+                query.email = email;
+            }
+            const cursor = reviewCollection.find(query);
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
+        //Post method for Add Review
         app.post('/addReview', async (req, res) => {
             const data = req.body
             const result = await reviewCollection.insertOne(data)
