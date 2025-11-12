@@ -101,6 +101,23 @@ async function run() {
         });
 
 
+        // Show user's favorites in My favorites page
+        app.get('/favorites', async (req, res) => {
+            try {
+                const email = req.query.email;
+                if (!email) {
+                    return res.status(400).send({ message: "Missing email query parameter" });
+                }
+
+                const favorites = await fovoritesCollection.find({ userEmail: email }).toArray();
+                res.send(favorites);
+            } catch (error) {
+                res.status(500).send({ message: "Failed to fetch favorites" });
+            }
+        });
+
+
+
         //Update method for my Reviews
         app.put('/editReviews/:id', async (req, res) => {
             const { id } = req.params
