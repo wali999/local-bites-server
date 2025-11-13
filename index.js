@@ -22,7 +22,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
     try {
-        await client.connect();
+        // await client.connect();
 
         const db = client.db('localbites-db')
         const reviewCollection = db.collection('reviews')
@@ -82,23 +82,27 @@ async function run() {
         //Store fovorite data from Heart
         app.post('/favorites', async (req, res) => {
             try {
-                const { _id, userEmail, ...favoriteData } = req.body;
-
-                if (!_id || !userEmail) {
-                    return res.status(400).send({ message: "Missing _id or userEmail in request body" });
+                const { originalId, userEmail, ...favoriteData } = req.body;
+                if (!originalId || !userEmail) {
+                    return res.status(400).send({ message: "Missing originalId or userEmail in request body" });
                 }
 
-                const exists = await fovoritesCollection.findOne({ _id, userEmail });
+                const exists = await fovoritesCollection.findOne({ originalId, userEmail });
                 if (exists) {
                     return res.status(409).send({ message: "Already added to favorites" });
                 }
-
-                const result = await fovoritesCollection.insertOne({ _id, userEmail, ...favoriteData });
+                const result = await fovoritesCollection.insertOne({
+                    originalId,
+                    userEmail,
+                    ...favoriteData,
+                });
                 res.status(201).send({ success: true, message: "Added to favorites", result });
             } catch (error) {
+                console.error(error);
                 res.status(500).send({ message: "Failed to add favorite" });
             }
         });
+
 
 
         // Show user's favorites in My favorites page
@@ -108,7 +112,6 @@ async function run() {
                 if (!email) {
                     return res.status(400).send({ message: "Missing email query parameter" });
                 }
-
                 const favorites = await fovoritesCollection.find({ userEmail: email }).toArray();
                 res.send(favorites);
             } catch (error) {
@@ -142,7 +145,7 @@ async function run() {
 
 
 
-        await client.db("admin").command({ ping: 1 });
+        // await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
 
