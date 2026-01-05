@@ -145,6 +145,82 @@ async function run() {
 
 
 
+        //Dashboard
+        // overview stats
+        app.get('/dashboard/stats', async (req, res) => {
+            try {
+                const email = req.query.email;
+
+                const totalReviews = await reviewCollection.countDocuments();
+                const myReviews = await reviewCollection.countDocuments({ email });
+                const myFavorites = await fovoritesCollection.countDocuments({ userEmail: email });
+
+                const ratings = await reviewCollection.aggregate([
+                    { $group: { _id: null, avgRating: { $avg: "$rating" } } }
+                ]).toArray();
+
+                res.send([
+                    { label: "Total Reviews", value: totalReviews },
+                    { label: "My Reviews", value: myReviews },
+                    { label: "My Favorites", value: myFavorites },
+                    { label: "Avg Rating", value: ratings[0]?.avgRating?.toFixed(1) || 0 },
+                ]);
+            } catch (error) {
+                res.status(500).send({ message: "Failed to load stats" });
+            }
+        });
+
+        app.get('/dashboard/reviews-per-month', async (req, res) => {
+            const data = await reviewCollection.aggregate([
+                {
+                    $group: {
+                        _id: { $month: "$created_at" },
+                        count: { $sum: 1 }
+                    }
+                },
+                { $sort: { "_id": 1 } }
+            ]).toArray();
+
+            res.send(
+                data.map(item => ({
+                    month: `Month ${item._id}`,
+                    reviews: item.count
+                }))
+            );
+        });
+
+
+        app.get('/dashboard/ratings', async (req, res) => {
+            const data = await reviewCollection.aggregate([
+                {
+                    $group: {
+                        _id: "$rating",
+                        count: { $sum: 1 }
+                    }
+                }
+            ]).toArray();
+
+            res.send(
+                data.map(item => ({
+                    rating: item._id,
+                    value: item.count
+                }))
+            );
+        });
+
+
+        app.get('/dashboard/recent-reviews', async (req, res) => {
+            const reviews = await reviewCollection
+                .find()
+                .sort({ created_at: -1 })
+                .limit(5)
+                .toArray();
+
+            res.send(reviews);
+        });
+
+
+
         // await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
